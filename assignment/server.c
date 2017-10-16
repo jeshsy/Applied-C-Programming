@@ -15,6 +15,8 @@
 #include <sys/wait.h>
 #include <signal.h>
 
+
+/// defining stuff for later
 #define PORT "7080"  // the port users will be connecting to
 
 #define GET_ROOT "GET / HTTP/1.0"
@@ -26,8 +28,12 @@
 #define CONNECTION "Connection: close"
 #define CONTENT_TYPE "Content-Type: text/html"
 
+
 #define BACKLOG 10   // how many pending connections queue will hold
 
+///?? i haev no idea whats gonig on in the bottom line of code?????
+///it's using errno that was included.
+///errno set to 0 at start, 
 void sigchld_handler(int s)
 {
   // waitpid() might overwrite errno, so we save and restore it:
@@ -37,8 +43,8 @@ void sigchld_handler(int s)
 
   errno = saved_errno;
 }
-
-
+///so it's ckecking sa.sa_family, and if it is AF_INET, then it's returning
+///some sort of struct for a type of socket? IP4 and IP6???
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
 {
@@ -65,11 +71,14 @@ int main(void)
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_flags = AI_PASSIVE; // use my IP
 
+
+///  this is error checking? if getaddrinfor has an error
   if ((rv = getaddrinfo(NULL, PORT, &hints, &servinfo)) != 0) {
     fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
     return 1;
   }
 
+///this is making a socket?
   // loop through all the results and bind to the first we can
   for(p = servinfo; p != NULL; p = p->ai_next) {
     if ((sockfd = socket(p->ai_family, p->ai_socktype,
@@ -115,6 +124,7 @@ int main(void)
 
   printf("server: waiting for connections...\n");
 
+///checking if the socket is the right size?
   while(1) {  // main accept() loop
     sin_size = sizeof their_addr;
     new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
@@ -122,12 +132,13 @@ int main(void)
       perror("accept");
       continue;
     }
-
+///checking to see if we have connection
     inet_ntop(their_addr.ss_family,
       get_in_addr((struct sockaddr *)&their_addr),
       s, sizeof s);
     printf("server: got connection from %s\n", s);
 
+///not quite sure what this is doing, but it looks like it's parsing inputs
     if (!fork()) { // this is the child process
       // LS: read from client input
       const int READ_BUFFER_SIZE = 1024;
@@ -141,7 +152,7 @@ int main(void)
       // LS: parse the input and determine what result to send
       close(sockfd); // child doesn't need the listener
       // LS: Send the correct response in JSON format
-      if (send(new_fd, "Hello, world!", 13, 0) == -1)
+      if (send(new_fd,"HTTP/1.0 200 OK\n\n<html><head></head><body>Hello World!</body></html>", 69, 0) == -1)
         perror("send");
       close(new_fd);
       exit(0);
